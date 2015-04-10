@@ -10,10 +10,12 @@
 ****************************************End Comment********************************************/
 #pragma once
 
+#include<iostream>
+
 #ifdef _WIN32
 #include <intsafe.h>
 #elif defined(__linux__) || (defined(__APPLE__) && defined(__MACH__))
-typedef UINT16 unsigned char;
+typedef UINT16 unsigned short;
 typedef UINT32 unsigned int;
 #define UINT32_MAX      0xffffffffui32
 #endif
@@ -54,8 +56,6 @@ public:
 	inline float& at(UINT32 index);
 	inline float& at(vector<UINT32> position);
 
-	inline void setOperatingDimensions(UINT16 da, UINT16 db);
-
 	static MatrixND generateIdentity(vector<UINT32>& dimensions, OperatingDimensions_t dims);
 	static MatrixND transpose(MatrixND matIn, OperatingDimensions_t dims);
 
@@ -63,9 +63,10 @@ public:
 	inline MatrixND& add(MatrixND other);
 	inline MatrixND& subtract(MatrixND other);
 
-	MatrixND multiply(MatrixND other);
+	MatrixND& multiply(MatrixND other);
 
 	MatrixND outerProduct(MatrixND other);
+
 	MatrixND& operator+=(MatrixND other);
 	MatrixND& operator-=(MatrixND other);
 	MatrixND& operator*=(float multiple);
@@ -79,17 +80,22 @@ public:
 	//Using the bitwise xor to signify transpose with operators
 	friend MatrixND operator^(MatrixND mat1, OperatingDimensions_t dims);
 
+	void copy(MatrixND* target);
+	void setOperatingDimensions(UINT16 da, UINT16 db);
+
+	//Functions only appears in header
+	inline UINT16 getDimensionality(void){return m_iDimensionality;}
 	inline UINT32 getElements(void){return m_iElements;}
 private:
 	vector<UINT32> getPositionFromIndex(UINT32 index);
 	UINT32 getIndexFromPosition(vector<UINT32> pos);
-	
-	bool multipliable(MatrixND other) const;
 
 	inline bool isInMatrix(vector<UINT32> pos) const;
 	inline bool isInMatrix(UINT32 index) const;
 	inline bool dimensionExists(const UINT16& dimension) const;
 	inline bool compareDimensions(MatrixND other) const;
+
+	bool multipliable(MatrixND other) const;
 };
 
 /***********************************************Comment*********************************************************

@@ -26,20 +26,19 @@ MatrixND::~MatrixND(void)
 float& MatrixND::at(UINT32 index)
 {
 	if (isInMatrix(index))
+	{
 		return m_pfData[index];
+	}
 	return m_modPrevent;
 }
 
 float& MatrixND::at(vector<UINT32> position)
 {
 	if (isInMatrix(position))
+	{
 		return m_pfData[getIndexFromPosition(position)];
+	}
 	return m_modPrevent;
-}
-
-void MatrixND::setOperatingDimensions(UINT16 da, UINT16 db)
-{
-	m_OperatingDimensions.set(da, db);
 }
 
 MatrixND MatrixND::transpose(MatrixND matIn, OperatingDimensions_t dims)
@@ -123,7 +122,7 @@ MatrixND& MatrixND::subtract(MatrixND other)
 	return *this;
 }
 
-MatrixND MatrixND::multiply(MatrixND other)
+MatrixND& MatrixND::multiply(MatrixND other)
 {
 	if (multipliable(other))
 	{
@@ -133,8 +132,8 @@ MatrixND MatrixND::multiply(MatrixND other)
 		{
 			dimensions.at(dimension) = this->m_piDimensions[dimension];
 		}
-		dimensions.at(m_OperatingDimensions.da) = this->m_piDimensions[m_OperatingDimensions.da];
-		dimensions.at(m_OperatingDimensions.db) = this->m_piDimensions[m_OperatingDimensions.db];
+		dimensions.at(m_OperatingDimensions.da - 1) = this->m_piDimensions[m_OperatingDimensions.da - 1];
+		dimensions.at(m_OperatingDimensions.db - 1) = this->m_piDimensions[m_OperatingDimensions.db - 1];
 
 		MatrixND matOut(dimensions);
 		for (UINT32 i = 0; i < matOut.m_iElements; i++)
@@ -144,18 +143,15 @@ MatrixND MatrixND::multiply(MatrixND other)
 			{
 				vector<UINT32> positionA = getPositionFromIndex(i);
 				vector<UINT32> positionB = getPositionFromIndex(i);
-				positionA.at(m_OperatingDimensions.db);
-				positionB.at(m_OperatingDimensions.da);
-				sum += this->at(positionA) * other.at(positionB);
+				positionA.at(m_OperatingDimensions.db - 1) = x + 1;
+				positionB.at(m_OperatingDimensions.da - 1) = x + 1;
+				sum += (this->at(positionA)) * (other.at(positionB));
 			}
 			matOut.at(i) = sum;
 		}
-		return matOut;
+		matOut.copy(this);
 	}
-	else
-	{
 	return *this;
-	}
 }
 
 MatrixND MatrixND::outerProduct(MatrixND other)
@@ -195,73 +191,23 @@ MatrixND MatrixND::outerProduct(MatrixND other)
 	return matOut;
 }
 
-//------------------------General Checkers------------------------
-
-bool MatrixND::isInMatrix(vector<UINT32> pos) const
-{
-	if (pos.size() != this->m_iDimensionality)
-		return false;
-	for (UINT16 i = 0; i < m_iDimensionality; i++)
-	{
-		if (pos.at(i) > m_piDimensions[i])
-			return false;
-	}
-	return true;
-}
-
-bool MatrixND::isInMatrix(UINT32 index) const
-{
-		return index <= m_iElements;
-}
-
-bool MatrixND::dimensionExists(const UINT16& dimension) const
-{
-	return dimension <= m_iDimensionality;
-}
-
-bool MatrixND::compareDimensions(MatrixND other) const
-{
-	if (m_iDimensionality != other.m_iDimensionality)
-		return false;
-	for (UINT16 i = 0; i < m_iDimensionality; i++)
-	{
-		if (m_piDimensions[i] != other.m_piDimensions[i])
-			return false;
-	}
-	return true;
-}
-
-bool MatrixND::multipliable(MatrixND other) const
-{
-	if (m_iDimensionality != other.m_iDimensionality)
-		return false;
-	if (this->m_piDimensions[m_OperatingDimensions.db] != other.m_piDimensions[m_OperatingDimensions.da])
-		return false;
-	for (UINT16 d = 0; d < m_iDimensionality; d++)
-	{
-		if (d == m_OperatingDimensions.da || d == m_OperatingDimensions.db)
-			continue;
-		if (this->m_piDimensions[d] != other.m_piDimensions[d])
-			return false;
-	}
-	return true;
-}
-
 //-------------------------Positioners-----------------------------
 
 vector<UINT32> MatrixND::getPositionFromIndex(UINT32 index)
 {
 	vector<UINT32> position(m_iDimensionality);
-	UINT32 product = 1;
-	UINT32 tempIndex = index;
-	for (UINT16 i = 0; i < m_iDimensionality; i++)
+	if(isInMatrix(index))
 	{
-		product *= m_piDimensions[i];
-		position.at(i) = 1;
-	}
-	UINT32 currentDimension = m_iDimensionality - 1;
-	while (currentDimension < m_iDimensionality)
-	{
+		UINT32 product = 1;
+		UINT32 tempIndex = index;
+		for (UINT16 i = 0; i < m_iDimensionality; i++)
+		{
+			product *= m_piDimensions[i];
+			position.at(i) = 1;
+		}
+		UINT32 currentDimension = m_iDimensionality - 1;
+		while (currentDimension < m_iDimensionality)
+		{
 		product /= m_piDimensions[currentDimension];
 		//We check if the value is less than the current
 		//In essence checking for integer wrapping when 
@@ -271,8 +217,9 @@ vector<UINT32> MatrixND::getPositionFromIndex(UINT32 index)
 			position.at(currentDimension) += 1;
 			tempIndex -= product;
 		}
-		if (tempIndex == 0) break;
-		currentDimension--;
+			if (tempIndex == 0) break;
+			currentDimension--;
+		}
 	}
 	return position;
 }
@@ -289,13 +236,14 @@ UINT32 MatrixND::getIndexFromPosition(vector<UINT32> pos)
 		}
 		for (UINT16 j = m_iDimensionality - 1; j <= m_iDimensionality - 1; j--)
 		{
+			product /= m_piDimensions[j];
 			index += (pos.at(j) - 1) * product;
-			product /= pos.at(j);
 		}
 		return index;
 	}
 	else
 	{
+
 		//Returns the maximum UINT32 value as this is an extremely improbable scenario
 		//This is only used because unsigned long int will not allow a negative value
 		return UINT32_MAX;
@@ -352,6 +300,83 @@ MatrixND operator*(MatrixND mat1,MatrixND mat2)
 MatrixND operator^(MatrixND mat1, MatrixND::OperatingDimensions_t dims)
 {
 	return MatrixND::transpose(mat1, dims);
+}
+
+//------------------------Utilities----------------------------
+
+void MatrixND::copy(MatrixND* target)
+{
+	target->m_iDimensionality = this->m_iDimensionality;
+	target->m_iElements = this->m_iElements;
+	target->m_piDimensions = NULL;
+	target->m_pfData = NULL;
+	target->m_piDimensions = new UINT32[target->m_iDimensionality];
+	target->m_pfData = new float[target->m_iElements];
+	for(UINT16 i = 0; i < target->m_iDimensionality; i++)
+	{
+		target->m_piDimensions[i] = this->m_piDimensions[i];
+	}
+	for(UINT32 j = 0; j < target->m_iElements; j++)
+	{
+		target->m_pfData[j] = this->m_pfData[j];
+	}
+}
+
+void MatrixND::setOperatingDimensions(UINT16 da, UINT16 db)
+{
+	m_OperatingDimensions.set(da, db);
+}
+
+//------------------------General Checkers------------------------
+
+bool MatrixND::isInMatrix(vector<UINT32> pos) const
+{
+	if (pos.size() != this->m_iDimensionality)
+		return false;
+	for (UINT16 i = 0; i < m_iDimensionality; i++)
+	{
+		if (pos.at(i) > m_piDimensions[i])
+			return false;
+	}
+	return true;
+}
+
+bool MatrixND::isInMatrix(UINT32 index) const
+{
+		return index <= m_iElements;
+}
+
+bool MatrixND::dimensionExists(const UINT16& dimension) const
+{
+	return dimension <= m_iDimensionality;
+}
+
+bool MatrixND::compareDimensions(MatrixND other) const
+{
+	if (m_iDimensionality != other.m_iDimensionality)
+		return false;
+	for (UINT16 i = 0; i < m_iDimensionality; i++)
+	{
+		if (m_piDimensions[i] != other.m_piDimensions[i])
+			return false;
+	}
+	return true;
+}
+
+bool MatrixND::multipliable(MatrixND other) const
+{
+	if (m_iDimensionality != other.m_iDimensionality)
+		return false;
+	if (this->m_piDimensions[m_OperatingDimensions.db] != other.m_piDimensions[m_OperatingDimensions.da])
+		return false;
+	for (UINT16 d = 0; d < m_iDimensionality; d++)
+	{
+		if (d == m_OperatingDimensions.da || d == m_OperatingDimensions.db)
+			continue;
+		if (this->m_piDimensions[d] != other.m_piDimensions[d])
+			return false;
+	}
+	return true;
 }
 
 //-----------------------------------------------------------------
