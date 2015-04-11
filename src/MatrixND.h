@@ -3,20 +3,18 @@
 *Purpose:  To be able to represent and operate on Multidimensional Matrices
 *Author(s): Egnatious (Jordan Ericksen)
 *Date Created: 3/30/15 
-*Date Last Modified: 4/6/15
-*Version: 0.1
+*Date Last Modified: 4/10/15
+*Version: 0.2
 *Notes: This class uses column ordered matrices because that was what was used in the papers
 *linked on the bottom of the header file
 ****************************************End Comment********************************************/
 #pragma once
 
-#include<iostream>
-
 #ifdef _WIN32
-#include <intsafe.h>
+#include<intsafe.h>
 #elif defined(__linux__) || (defined(__APPLE__) && defined(__MACH__))
-typedef UINT16 unsigned short;
-typedef UINT32 unsigned int;
+typedef unsigned short UINT16;
+typedef unsigned short UINT32;
 #define UINT32_MAX      0xffffffffui32
 #endif
 #include <vector>
@@ -65,6 +63,8 @@ public:
 
 	MatrixND& multiply(MatrixND other);
 
+	bool equals(MatrixND other) const;
+
 	MatrixND outerProduct(MatrixND other);
 
 	MatrixND& operator+=(MatrixND other);
@@ -72,13 +72,16 @@ public:
 	MatrixND& operator*=(float multiple);
 	MatrixND operator*=(MatrixND other);
 
+	//Using the bitwise xor to signify transpose with operators
+	friend MatrixND operator^(MatrixND mat1, OperatingDimensions_t dims);
+
 	friend MatrixND& operator+(MatrixND mat1, MatrixND mat2);
 	friend MatrixND& operator-(MatrixND mat1, MatrixND mat2);
 	friend MatrixND& operator*(float& multiple, MatrixND mat);
 	friend MatrixND& operator*(MatrixND mat, float* multiple);
 	friend MatrixND operator*(MatrixND mat1, MatrixND mat2);
-	//Using the bitwise xor to signify transpose with operators
-	friend MatrixND operator^(MatrixND mat1, OperatingDimensions_t dims);
+
+	friend bool operator==(MatrixND mat1, MatrixND mat2);
 
 	void copy(MatrixND* target);
 	void setOperatingDimensions(UINT16 da, UINT16 db);

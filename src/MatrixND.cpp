@@ -191,66 +191,26 @@ MatrixND MatrixND::outerProduct(MatrixND other)
 	return matOut;
 }
 
-//-------------------------Positioners-----------------------------
-
-vector<UINT32> MatrixND::getPositionFromIndex(UINT32 index)
+bool MatrixND::equals(MatrixND other) const
 {
-	vector<UINT32> position(m_iDimensionality);
-	if(isInMatrix(index))
+	if (!compareDimensions(other))
+		return false;
+	if (this->m_iElements != other.m_iElements)
+		return false;
+	for (UINT32 i = 0; i < m_iElements; i++)
 	{
-		UINT32 product = 1;
-		UINT32 tempIndex = index;
-		for (UINT16 i = 0; i < m_iDimensionality; i++)
-		{
-			product *= m_piDimensions[i];
-			position.at(i) = 1;
-		}
-		UINT32 currentDimension = m_iDimensionality - 1;
-		while (currentDimension < m_iDimensionality)
-		{
-		product /= m_piDimensions[currentDimension];
-		//We check if the value is less than the current
-		//In essence checking for integer wrapping when 
-		//the value tries to be negative in unsigned type
-		while ((tempIndex - product) < tempIndex)
-		{
-			position.at(currentDimension) += 1;
-			tempIndex -= product;
-		}
-			if (tempIndex == 0) break;
-			currentDimension--;
-		}
+		if (this->m_pfData[i] != other.m_pfData[i])
+			return false;
 	}
-	return position;
-}
-
-UINT32 MatrixND::getIndexFromPosition(vector<UINT32> pos)
-{
-	if (isInMatrix(pos))
-	{
-		UINT32 index = 0;
-		UINT32 product = 1;
-		for (UINT16 i = 0; i < m_iDimensionality; i++)
-		{
-			product *= m_piDimensions[i];
-		}
-		for (UINT16 j = m_iDimensionality - 1; j <= m_iDimensionality - 1; j--)
-		{
-			product /= m_piDimensions[j];
-			index += (pos.at(j) - 1) * product;
-		}
-		return index;
-	}
-	else
-	{
-
-		//Returns the maximum UINT32 value as this is an extremely improbable scenario
-		//This is only used because unsigned long int will not allow a negative value
-		return UINT32_MAX;
-	}
+	return true;
 }
 
 //-------------------------Operators------------------------------
+
+MatrixND operator^(MatrixND mat1, MatrixND::OperatingDimensions_t dims)
+{
+	return MatrixND::transpose(mat1, dims);
+}
 
 MatrixND& MatrixND::operator+=(MatrixND other)
 {
@@ -297,9 +257,9 @@ MatrixND operator*(MatrixND mat1,MatrixND mat2)
 	return mat1.multiply(mat2);
 }
 
-MatrixND operator^(MatrixND mat1, MatrixND::OperatingDimensions_t dims)
+bool operator==(MatrixND mat1, MatrixND mat2)
 {
-	return MatrixND::transpose(mat1, dims);
+	return mat1.equals(mat2);
 }
 
 //------------------------Utilities----------------------------
@@ -312,19 +272,72 @@ void MatrixND::copy(MatrixND* target)
 	target->m_pfData = NULL;
 	target->m_piDimensions = new UINT32[target->m_iDimensionality];
 	target->m_pfData = new float[target->m_iElements];
-	for(UINT16 i = 0; i < target->m_iDimensionality; i++)
-	{
-		target->m_piDimensions[i] = this->m_piDimensions[i];
-	}
-	for(UINT32 j = 0; j < target->m_iElements; j++)
-	{
-		target->m_pfData[j] = this->m_pfData[j];
-	}
+	memcpy(target->m_piDimensions, this->m_piDimensions, sizeof(UINT32) * this->m_iDimensionality);
+	memcpy(target->m_pfData, this->m_pfData, sizeof(UINT32) * this->m_iElements);
 }
 
 void MatrixND::setOperatingDimensions(UINT16 da, UINT16 db)
 {
 	m_OperatingDimensions.set(da, db);
+}
+
+//-------------------------Positioners-----------------------------
+
+vector<UINT32> MatrixND::getPositionFromIndex(UINT32 index)
+{
+	vector<UINT32> position(m_iDimensionality);
+	if (isInMatrix(index))
+	{
+		UINT32 product = 1;
+		UINT32 tempIndex = index;
+		for (UINT16 i = 0; i < m_iDimensionality; i++)
+		{
+			product *= m_piDimensions[i];
+			position.at(i) = 1;
+		}
+		UINT32 currentDimension = m_iDimensionality - 1;
+		while (currentDimension < m_iDimensionality)
+		{
+			product /= m_piDimensions[currentDimension];
+			//We check if the value is less than the current
+			//In essence checking for integer wrapping when 
+			//the value tries to be negative in unsigned type
+			while ((tempIndex - product) < tempIndex)
+			{
+				position.at(currentDimension) += 1;
+				tempIndex -= product;
+			}
+			if (tempIndex == 0) break;
+			currentDimension--;
+		}
+	}
+	return position;
+}
+
+UINT32 MatrixND::getIndexFromPosition(vector<UINT32> pos)
+{
+	if (isInMatrix(pos))
+	{
+		UINT32 index = 0;
+		UINT32 product = 1;
+		for (UINT16 i = 0; i < m_iDimensionality; i++)
+		{
+			product *= m_piDimensions[i];
+		}
+		for (UINT16 j = m_iDimensionality - 1; j <= m_iDimensionality - 1; j--)
+		{
+			product /= m_piDimensions[j];
+			index += (pos.at(j) - 1) * product;
+		}
+		return index;
+	}
+	else
+	{
+
+		//Returns the maximum UINT32 value as this is an extremely improbable scenario
+		//This is only used because unsigned long int will not allow a negative value
+		return UINT32_MAX;
+	}
 }
 
 //------------------------General Checkers------------------------
@@ -367,11 +380,11 @@ bool MatrixND::multipliable(MatrixND other) const
 {
 	if (m_iDimensionality != other.m_iDimensionality)
 		return false;
-	if (this->m_piDimensions[m_OperatingDimensions.db] != other.m_piDimensions[m_OperatingDimensions.da])
+	if (this->m_piDimensions[m_OperatingDimensions.db - 1] != other.m_piDimensions[m_OperatingDimensions.da - 1])
 		return false;
 	for (UINT16 d = 0; d < m_iDimensionality; d++)
 	{
-		if (d == m_OperatingDimensions.da || d == m_OperatingDimensions.db)
+		if (d == m_OperatingDimensions.da - 1 || d == m_OperatingDimensions.db - 1)
 			continue;
 		if (this->m_piDimensions[d] != other.m_piDimensions[d])
 			return false;
