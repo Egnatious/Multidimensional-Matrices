@@ -1,6 +1,35 @@
 #include "MatrixND.h"
 
+//--Starting point for methods of struct OperatingDimensions_t--
+OperatingDimensions_t::OperatingDimensions_t(void)
+{
+	da = 1;
+	db = 2;
+}
 
+OperatingDimensions_t::OperatingDimensions_t(UINT16 da, UINT16 db)
+{
+	set(da, db);
+}
+
+void OperatingDimensions_t::set(UINT16 da, UINT16 db)
+{
+	{
+		//equivalent values will not change the values as this is not a valid case
+		if (da == db) return;
+		if (da < db)
+		{
+			this->da = da;
+			this->db = db;
+			return;
+		}
+		this->da = db;
+		this->db = da;
+		return;
+	}
+}
+
+//---------Starting point for methods of class MatrixND----------
 MatrixND::MatrixND(vector<UINT32> dimensions)
 {
 	m_iDimensionality = dimensions.size();
@@ -32,13 +61,23 @@ float& MatrixND::at(UINT32 index)
 	return m_modPrevent;
 }
 
-float& MatrixND::at(vector<UINT32> position)
+float& MatrixND::at(const vector<UINT32>& position)
 {
 	if (isInMatrix(position))
 	{
 		return m_pfData[getIndexFromPosition(position)];
 	}
 	return m_modPrevent;
+}
+
+float& MatrixND::atFast(UINT32 index)
+{
+	return m_pfData[index];
+}
+
+float& MatrixND::atFast(UINT32* position)
+{
+	return m_pfData[getIndexFromPositionFast(position)];
 }
 
 MatrixND MatrixND::transpose(MatrixND matIn, OperatingDimensions_t dims)
@@ -50,17 +89,17 @@ MatrixND MatrixND::transpose(MatrixND matIn, OperatingDimensions_t dims)
 	{
 		dimensions.at(i) = matIn.m_piDimensions[i];
 	}
-	dimensions.at(dims.da) = matIn.m_piDimensions[dims.db];
-	dimensions.at(dims.db) = matIn.m_piDimensions[dims.da];
+	dimensions.at(dims.da - 1) = matIn.m_piDimensions[dims.db - 1];
+	dimensions.at(dims.db - 1) = matIn.m_piDimensions[dims.da - 1];
 	MatrixND matOut(dimensions);
-	for (UINT j = 0; j < matOut.m_iElements; j++)
+	for (UINT32 j = 0; j < matOut.m_iElements; j++)
 	{
-		vector<UINT32> position = matOut.getPositionFromIndex(j);
-		vector<UINT32> newPosition = matOut.getPositionFromIndex(j);
+		UINT32* position = matOut.getPositionFromIndexFast(j);
+		UINT32* newPosition = matOut.getPositionFromIndexFast(j);
 		//Swaps the position values at the appropriate dimensions
-		newPosition.at(dims.da) = position.at(dims.db);
-		newPosition.at(dims.db) = position.at(dims.da);
-		matOut.at(j) = matIn.at(newPosition);
+		newPosition[dims.da - 1] = position[dims.db - 1];
+		newPosition[dims.db - 1] = position[dims.da - 1];
+		matOut.atFast(j) = matIn.atFast(newPosition);
 	}
 	return matOut;
 }
@@ -70,17 +109,12 @@ MatrixND MatrixND::generateIdentity(vector<UINT32>& dimensions, OperatingDimensi
 	MatrixND identity(dimensions);
 	if (dimensions.at(dims.da - 1) == dimensions.at(dims.db - 1))
 	{
-		vector<UINT32> position(identity.m_iDimensionality);
-		for (UINT16 k = 0; k < identity.m_iDimensionality; k++)
-		{
-			position.at(k) = 1;
-		}
 		for (UINT32 i = 0; i < identity.m_iElements; i++)
 		{
-			vector<UINT32> position = identity.getPositionFromIndex(i);
-			if (position.at(dims.da - 1) == position.at(dims.db - 1))
+			UINT32* position = identity.getPositionFromIndexFast(i);
+			if (position[dims.da - 1] == position[dims.db - 1])
 			{
-				identity.at(i) = 1.0f;
+				identity.atFast(i) = 1.0f;
 			}
 		}
 	}
@@ -141,20 +175,20 @@ MatrixND& MatrixND::multiply(MatrixND other)
 			float sum = 0;
 			for (UINT32 x = 0; x < n; x++)
 			{
-				vector<UINT32> positionA = getPositionFromIndex(i);
-				vector<UINT32> positionB = getPositionFromIndex(i);
-				positionA.at(m_OperatingDimensions.db - 1) = x + 1;
-				positionB.at(m_OperatingDimensions.da - 1) = x + 1;
-				sum += (this->at(positionA)) * (other.at(positionB));
+				UINT32* positionA = getPositionFromIndexFast(i);
+				UINT32* positionB = getPositionFromIndexFast(i);
+				positionA[m_OperatingDimensions.db - 1] = x + 1;
+				positionB[m_OperatingDimensions.da - 1] = x + 1;
+				sum += (this->atFast(positionA)) * (other.atFast(positionB));
 			}
-			matOut.at(i) = sum;
+			matOut.atFast(i) = sum;
 		}
 		matOut.copy(this);
 	}
 	return *this;
 }
 
-MatrixND MatrixND::outerProduct(MatrixND other)
+MatrixND& MatrixND::outerProduct(MatrixND other)
 {
 	UINT32 dimensionality = this->m_iDimensionality + other.m_iDimensionality;
 	vector<UINT32> dimensions(dimensionality);
@@ -173,22 +207,33 @@ MatrixND MatrixND::outerProduct(MatrixND other)
 	MatrixND matOut(dimensions);
 	for (UINT32 j = 0; j < this->m_iElements; j++)
 	{
-		vector<UINT32> firstPosition = this->getPositionFromIndex(j);
-		float firstValue = this->at(j);
+		UINT32* firstPosition = this->getPositionFromIndexFast(j);
+		float firstValue = this->atFast(j);
 
 		for (UINT32 k = 0; k < other.m_iElements; k++)
 		{
-			vector<UINT32> secondPosition = other.getPositionFromIndex(k);
-			float secondValue = other.at(k);
+			UINT32* secondPosition = this->getPositionFromIndexFast(k);
+			float secondValue = other.atFast(k);
 
-			vector<UINT32> resultingPosition;
-			//Appending the two vectors to get the resulting position
-			resultingPosition.insert(resultingPosition.end(), firstPosition.begin(), firstPosition.end());
-			resultingPosition.insert(resultingPosition.end(), secondPosition.begin(), secondPosition.end());
-			matOut.at(resultingPosition) = firstValue * secondValue;
+			UINT32* resultingPosition = new UINT32[dimensionality];
+			//Appending the two arrays to get the resulting position
+			for (UINT32 index = 0; index < dimensionality; index++)
+			{
+				if (index < this->m_iDimensionality)
+				{
+					resultingPosition[index] = firstPosition[index];
+				}
+				else
+				{
+					resultingPosition[index] = secondPosition[index - this->m_iDimensionality];
+				}
+
+			}
+			matOut.atFast(resultingPosition) = firstValue * secondValue;
 		}
 	}
-	return matOut;
+	matOut.copy(this);
+	return *this;
 }
 
 bool MatrixND::equals(MatrixND other) const
@@ -207,7 +252,7 @@ bool MatrixND::equals(MatrixND other) const
 
 //-------------------------Operators------------------------------
 
-MatrixND operator^(MatrixND mat1, MatrixND::OperatingDimensions_t dims)
+MatrixND operator^(MatrixND mat1, OperatingDimensions_t dims)
 {
 	return MatrixND::transpose(mat1, dims);
 }
@@ -262,6 +307,11 @@ bool operator==(MatrixND mat1, MatrixND mat2)
 	return mat1.equals(mat2);
 }
 
+bool operator!=(MatrixND mat1, MatrixND mat2)
+{
+	return !mat1.equals(mat2);
+}
+
 //------------------------Utilities----------------------------
 
 void MatrixND::copy(MatrixND* target)
@@ -283,41 +333,36 @@ void MatrixND::setOperatingDimensions(UINT16 da, UINT16 db)
 
 //-------------------------Positioners-----------------------------
 
-vector<UINT32> MatrixND::getPositionFromIndex(UINT32 index)
+vector<UINT32> MatrixND::getPositionFromIndex(UINT32 index) const
 {
 	vector<UINT32> position(m_iDimensionality);
-	if (isInMatrix(index))
+	UINT32 product = 1;
+	UINT32 tempIndex = index;
+	for (UINT16 i = 0; i < m_iDimensionality; i++)
 	{
-		UINT32 product = 1;
-		UINT32 tempIndex = index;
-		for (UINT16 i = 0; i < m_iDimensionality; i++)
+		product *= m_piDimensions[i];
+		position.at(i) = 1;
+	}
+	UINT32 currentDimension = m_iDimensionality - 1;
+	while (currentDimension < m_iDimensionality)
+	{
+		product /= m_piDimensions[currentDimension];
+		//We check if the value is less than the current
+		//In essence checking for integer wrapping when 
+		//the value tries to be negative in unsigned type
+		while ((tempIndex - product) < tempIndex)
 		{
-			product *= m_piDimensions[i];
-			position.at(i) = 1;
+			position.at(currentDimension) += 1;
+			tempIndex -= product;
 		}
-		UINT32 currentDimension = m_iDimensionality - 1;
-		while (currentDimension < m_iDimensionality)
-		{
-			product /= m_piDimensions[currentDimension];
-			//We check if the value is less than the current
-			//In essence checking for integer wrapping when 
-			//the value tries to be negative in unsigned type
-			while ((tempIndex - product) < tempIndex)
-			{
-				position.at(currentDimension) += 1;
-				tempIndex -= product;
-			}
-			if (tempIndex == 0) break;
-			currentDimension--;
-		}
+		if (tempIndex == 0) break;
+		currentDimension--;
 	}
 	return position;
 }
 
-UINT32 MatrixND::getIndexFromPosition(vector<UINT32> pos)
+UINT32 MatrixND::getIndexFromPosition(vector<UINT32> pos) const
 {
-	if (isInMatrix(pos))
-	{
 		UINT32 index = 0;
 		UINT32 product = 1;
 		for (UINT16 i = 0; i < m_iDimensionality; i++)
@@ -330,14 +375,50 @@ UINT32 MatrixND::getIndexFromPosition(vector<UINT32> pos)
 			index += (pos.at(j) - 1) * product;
 		}
 		return index;
-	}
-	else
-	{
+}
 
-		//Returns the maximum UINT32 value as this is an extremely improbable scenario
-		//This is only used because unsigned long int will not allow a negative value
-		return UINT32_MAX;
+UINT32* MatrixND::getPositionFromIndexFast(UINT32 index) const
+{
+	UINT32* position = new UINT32[m_iDimensionality];
+	UINT32 product = 1;
+	UINT32 tempIndex = index;
+	for (UINT16 i = 0; i < m_iDimensionality; i++)
+	{
+		product *= m_piDimensions[i];
+		position[i] = 1;
 	}
+	UINT32 currentDimension = m_iDimensionality - 1;
+	while (currentDimension < m_iDimensionality)
+	{
+		product /= m_piDimensions[currentDimension];
+		//We check if the value is less than the current
+		//In essence checking for integer wrapping when 
+		//the value tries to be negative in unsigned type
+		while ((tempIndex - product) < tempIndex)
+		{
+			position[currentDimension] += 1;
+			tempIndex -= product;
+		}
+		if (tempIndex == 0) break;
+		currentDimension--;
+	}
+	return position;
+}
+
+UINT32 MatrixND::getIndexFromPositionFast(UINT32* pos) const
+{
+	UINT32 index = 0;
+	UINT32 product = 1;
+	for (UINT16 i = 0; i < m_iDimensionality; i++)
+	{
+		product *= m_piDimensions[i];
+	}
+	for (UINT16 j = m_iDimensionality - 1; j <= m_iDimensionality - 1; j--)
+	{
+		product /= m_piDimensions[j];
+		index += (pos[j] - 1) * product;
+	}
+	return index;
 }
 
 //------------------------General Checkers------------------------
@@ -390,34 +471,4 @@ bool MatrixND::multipliable(MatrixND other) const
 			return false;
 	}
 	return true;
-}
-
-//-----------------------------------------------------------------
-
-MatrixND::OperatingDimensions_t::OperatingDimensions_t(void)
-{
-	da = 1;
-	db = 2;
-}
-
-MatrixND::OperatingDimensions_t::OperatingDimensions_t(UINT16 da, UINT16 db)
-{
-	set(da, db);
-}
-
-void MatrixND::OperatingDimensions_t::set(UINT16 da, UINT16 db)
-{
-	{
-		//equivalent values will not change the values as this is not a valid case
-		if (da == db) return;
-		if (da < db)
-		{
-			this->da = da;
-			this->db = db;
-			return;
-		}
-		this->da = db;
-		this->db = db;
-		return;
-	}
 }

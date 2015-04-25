@@ -3,95 +3,103 @@
 *Purpose:  To be able to represent and operate on Multidimensional Matrices
 *Author(s): Egnatious (Jordan Ericksen)
 *Date Created: 3/30/15 
-*Date Last Modified: 4/10/15
-*Version: 0.2
-*Notes: This class uses column ordered matrices because that was what was used in the papers
-*linked on the bottom of the header file
+*Date Last Modified: 4/23/15
+*Version: 1.0
 ****************************************End Comment********************************************/
 #pragma once
 
-#ifdef _WIN32
-#include<intsafe.h>
-#elif defined(__linux__) || (defined(__APPLE__) && defined(__MACH__))
+#define DllExport   __declspec( dllexport )
+
+#include<vector>
+//defined to prevent dependency on intsafe.h for Mac and Linux platforms
+typedef unsigned int UINT32;
 typedef unsigned short UINT16;
-typedef unsigned short UINT32;
-#define UINT32_MAX      0xffffffffui32
-#endif
-#include <vector>
 
 using namespace std;
 
+/*This struct defines the dimensions the matrix will do its calculations in.
+By default these values are one and two. Although the set function will
+automatically place the values in proper order the lowest value should be first.*/
+struct OperatingDimensions_t
+{
+	UINT16 da;
+	UINT16 db;
+
+	DllExport OperatingDimensions_t(void);
+	DllExport OperatingDimensions_t(UINT16 da, UINT16 db);
+
+	DllExport void set(UINT16 da, UINT16 db);
+};
 
 class MatrixND
 {
 public:
-	MatrixND(vector<UINT32> dimensions);
-	~MatrixND(void);
-	
-	/*This struct defines the dimensions the matrix will do its calculations in.
-	By default these values are one and two. Although the set function will
-	automatically place the values in proper order the lowest value should be first.*/
-	struct OperatingDimensions_t
-	{
-		UINT16 da;
-		UINT16 db;
-
-		OperatingDimensions_t(void);
-		OperatingDimensions_t(UINT16 da, UINT16 db);
-
-		void set(UINT16 da, UINT16 db);
-	};
+	//Constructors
+	DllExport MatrixND(vector<UINT32> dimensions);
+	DllExport ~MatrixND(void);
 private:
+	//Class Members
 	float* m_pfData;
 	UINT32* m_piDimensions;
 	UINT16 m_iDimensionality;
 	UINT32 m_iElements;
 	OperatingDimensions_t m_OperatingDimensions;
 	/*This is to keep someone from modifying a non-existent
-	reference and maintain external memory security*/
+	reference and to maintain external memory security*/
 	float m_modPrevent;
 public:
-	inline float& at(UINT32 index);
-	inline float& at(vector<UINT32> position);
+	//Public functions
+	DllExport float& at(UINT32 index);
+	DllExport float& at(const vector<UINT32>& position);
 
-	static MatrixND generateIdentity(vector<UINT32>& dimensions, OperatingDimensions_t dims);
-	static MatrixND transpose(MatrixND matIn, OperatingDimensions_t dims);
+	/*Does not check whether the values are in matrix and trusts the programmer
+	Useful for performance in trusted code i.e. The multiplication function*/
+	DllExport inline float& atFast(UINT32 index);
+	DllExport inline float& atFast(UINT32* position);
 
-	inline MatrixND& scalarMultiply(float multiple);
-	inline MatrixND& add(MatrixND other);
-	inline MatrixND& subtract(MatrixND other);
+	DllExport static MatrixND generateIdentity(vector<UINT32>& dimensions, OperatingDimensions_t dims);
+	DllExport static MatrixND transpose(MatrixND matIn, OperatingDimensions_t dims);
 
-	MatrixND& multiply(MatrixND other);
+	DllExport inline MatrixND& scalarMultiply(float multiple);
+	DllExport inline MatrixND& add(MatrixND other);
+	DllExport inline MatrixND& subtract(MatrixND other);
 
-	bool equals(MatrixND other) const;
+	DllExport MatrixND& multiply(MatrixND other);
 
-	MatrixND outerProduct(MatrixND other);
+	DllExport bool equals(MatrixND other) const;
 
-	MatrixND& operator+=(MatrixND other);
-	MatrixND& operator-=(MatrixND other);
-	MatrixND& operator*=(float multiple);
-	MatrixND operator*=(MatrixND other);
+	DllExport MatrixND& outerProduct(MatrixND other);
+
+	DllExport MatrixND& operator+=(MatrixND other);
+	DllExport MatrixND& operator-=(MatrixND other);
+	DllExport MatrixND& operator*=(float multiple);
+	DllExport MatrixND operator*=(MatrixND other);
 
 	//Using the bitwise xor to signify transpose with operators
-	friend MatrixND operator^(MatrixND mat1, OperatingDimensions_t dims);
+	DllExport friend MatrixND operator^(MatrixND mat1, OperatingDimensions_t dims);
 
-	friend MatrixND& operator+(MatrixND mat1, MatrixND mat2);
-	friend MatrixND& operator-(MatrixND mat1, MatrixND mat2);
-	friend MatrixND& operator*(float& multiple, MatrixND mat);
-	friend MatrixND& operator*(MatrixND mat, float* multiple);
-	friend MatrixND operator*(MatrixND mat1, MatrixND mat2);
+	DllExport friend MatrixND& operator+(MatrixND mat1, MatrixND mat2);
+	DllExport friend MatrixND& operator-(MatrixND mat1, MatrixND mat2);
+	DllExport friend MatrixND& operator*(float& multiple, MatrixND mat);
+	DllExport friend MatrixND& operator*(MatrixND mat, float* multiple);
+	DllExport friend MatrixND operator*(MatrixND mat1, MatrixND mat2);
 
-	friend bool operator==(MatrixND mat1, MatrixND mat2);
+	DllExport friend bool operator==(MatrixND mat1, MatrixND mat2);
+	DllExport friend bool operator!=(MatrixND mat1, MatrixND mat2);
 
-	void copy(MatrixND* target);
-	void setOperatingDimensions(UINT16 da, UINT16 db);
+	DllExport void copy(MatrixND* target);
+	DllExport void setOperatingDimensions(UINT16 da, UINT16 db);
 
 	//Functions only appears in header
-	inline UINT16 getDimensionality(void){return m_iDimensionality;}
-	inline UINT32 getElements(void){return m_iElements;}
+	DllExport inline UINT16 getDimensionality(void) const{return m_iDimensionality;}
+	DllExport inline UINT32 getElements(void) const{return m_iElements;}
+	DllExport inline UINT32* const getDimensions(void) const{return m_piDimensions;}
 private:
-	vector<UINT32> getPositionFromIndex(UINT32 index);
-	UINT32 getIndexFromPosition(vector<UINT32> pos);
+	//Private Functions
+	vector<UINT32> getPositionFromIndex(UINT32 index) const;
+	UINT32 getIndexFromPosition(vector<UINT32> pos) const;
+	UINT32* getPositionFromIndexFast(UINT32 index) const;
+	UINT32 getIndexFromPositionFast(UINT32* pos) const;
 
 	inline bool isInMatrix(vector<UINT32> pos) const;
 	inline bool isInMatrix(UINT32 index) const;
