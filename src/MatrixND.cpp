@@ -30,7 +30,7 @@ void OperatingDimensions_t::set(UINT16 da, UINT16 db)
 }
 
 //---------Starting point for methods of class MatrixND----------
-MatrixND::MatrixND(vector<UINT32> dimensions)
+MatrixND::MatrixND(std::vector<UINT32> dimensions)
 {
 	m_iDimensionality = dimensions.size();
 	m_iElements = 1;
@@ -61,7 +61,7 @@ float& MatrixND::at(UINT32 index)
 	return m_modPrevent;
 }
 
-float& MatrixND::at(const vector<UINT32>& position)
+float& MatrixND::at(const std::vector<UINT32>& position)
 {
 	if (isInMatrix(position))
 	{
@@ -84,7 +84,7 @@ MatrixND MatrixND::transpose(MatrixND matIn, OperatingDimensions_t dims)
 {
 	if (!matIn.isInMatrix(dims.da) || !matIn.isInMatrix(dims.db)) 
 		return matIn;
-	vector<UINT32> dimensions(matIn.m_iDimensionality);
+	std::vector<UINT32> dimensions(matIn.m_iDimensionality);
 	for (UINT32 i = 0; i < matIn.m_iDimensionality; i++)
 	{
 		dimensions.at(i) = matIn.m_piDimensions[i];
@@ -104,7 +104,7 @@ MatrixND MatrixND::transpose(MatrixND matIn, OperatingDimensions_t dims)
 	return matOut;
 }
 
-MatrixND MatrixND::generateIdentity(vector<UINT32>& dimensions, OperatingDimensions_t dims)
+MatrixND MatrixND::generateIdentity(std::vector<UINT32>& dimensions, OperatingDimensions_t dims)
 {
 	MatrixND identity(dimensions);
 	if (dimensions.at(dims.da - 1) == dimensions.at(dims.db - 1))
@@ -161,7 +161,7 @@ MatrixND& MatrixND::multiply(MatrixND other)
 	if (multipliable(other))
 	{
 		UINT32 n = m_piDimensions[m_OperatingDimensions.da];
-		vector<UINT32> dimensions(this->m_iDimensionality);
+		std::vector<UINT32> dimensions(this->m_iDimensionality);
 		for (UINT32 dimension = 0; dimension < m_iDimensionality; dimension++)
 		{
 			dimensions.at(dimension) = this->m_piDimensions[dimension];
@@ -191,7 +191,7 @@ MatrixND& MatrixND::multiply(MatrixND other)
 MatrixND& MatrixND::outerProduct(MatrixND other)
 {
 	UINT32 dimensionality = this->m_iDimensionality + other.m_iDimensionality;
-	vector<UINT32> dimensions(dimensionality);
+	std::vector<UINT32> dimensions(dimensionality);
 	for (UINT32 i = 0; i < dimensionality; i++)
 	{
 		if (i < this->m_iDimensionality)
@@ -333,9 +333,9 @@ void MatrixND::setOperatingDimensions(UINT16 da, UINT16 db)
 
 //-------------------------Positioners-----------------------------
 
-vector<UINT32> MatrixND::getPositionFromIndex(UINT32 index) const
+std::vector<UINT32> MatrixND::getPositionFromIndex(UINT32 index) const
 {
-	vector<UINT32> position(m_iDimensionality);
+	std::vector<UINT32> position(m_iDimensionality);
 	UINT32 product = 1;
 	UINT32 tempIndex = index;
 	for (UINT16 i = 0; i < m_iDimensionality; i++)
@@ -361,7 +361,7 @@ vector<UINT32> MatrixND::getPositionFromIndex(UINT32 index) const
 	return position;
 }
 
-UINT32 MatrixND::getIndexFromPosition(vector<UINT32> pos) const
+UINT32 MatrixND::getIndexFromPosition(std::vector<UINT32> pos) const
 {
 		UINT32 index = 0;
 		UINT32 product = 1;
@@ -423,7 +423,7 @@ UINT32 MatrixND::getIndexFromPositionFast(UINT32* pos) const
 
 //------------------------General Checkers------------------------
 
-bool MatrixND::isInMatrix(vector<UINT32> pos) const
+bool MatrixND::isInMatrix(std::vector<UINT32> pos) const
 {
 	if (pos.size() != this->m_iDimensionality)
 		return false;

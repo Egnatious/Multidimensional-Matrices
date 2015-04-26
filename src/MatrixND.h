@@ -15,8 +15,6 @@
 typedef unsigned int UINT32;
 typedef unsigned short UINT16;
 
-using namespace std;
-
 /*This struct defines the dimensions the matrix will do its calculations in.
 By default these values are one and two. Although the set function will
 automatically place the values in proper order the lowest value should be first.*/
@@ -35,7 +33,7 @@ class MatrixND
 {
 public:
 	//Constructors
-	DllExport MatrixND(vector<UINT32> dimensions);
+	DllExport MatrixND(std::vector<UINT32> dimensions);
 	DllExport ~MatrixND(void);
 private:
 	//Class Members
@@ -50,14 +48,14 @@ private:
 public:
 	//Public functions
 	DllExport float& at(UINT32 index);
-	DllExport float& at(const vector<UINT32>& position);
+	DllExport float& at(const std::vector<UINT32>& position);
 
 	/*Does not check whether the values are in matrix and trusts the programmer
 	Useful for performance in trusted code i.e. The multiplication function*/
 	DllExport inline float& atFast(UINT32 index);
 	DllExport inline float& atFast(UINT32* position);
 
-	DllExport static MatrixND generateIdentity(vector<UINT32>& dimensions, OperatingDimensions_t dims);
+	DllExport static MatrixND generateIdentity(std::vector<UINT32>& dimensions, OperatingDimensions_t dims);
 	DllExport static MatrixND transpose(MatrixND matIn, OperatingDimensions_t dims);
 
 	DllExport inline MatrixND& scalarMultiply(float multiple);
@@ -96,12 +94,12 @@ public:
 	DllExport inline UINT32* const getDimensions(void) const{return m_piDimensions;}
 private:
 	//Private Functions
-	vector<UINT32> getPositionFromIndex(UINT32 index) const;
-	UINT32 getIndexFromPosition(vector<UINT32> pos) const;
+	std::vector<UINT32> getPositionFromIndex(UINT32 index) const;
+	UINT32 getIndexFromPosition(std::vector<UINT32> pos) const;
 	UINT32* getPositionFromIndexFast(UINT32 index) const;
 	UINT32 getIndexFromPositionFast(UINT32* pos) const;
 
-	inline bool isInMatrix(vector<UINT32> pos) const;
+	inline bool isInMatrix(std::vector<UINT32> pos) const;
 	inline bool isInMatrix(UINT32 index) const;
 	inline bool dimensionExists(const UINT16& dimension) const;
 	inline bool compareDimensions(MatrixND other) const;
