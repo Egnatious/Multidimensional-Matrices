@@ -6,11 +6,19 @@
 *Date Last Modified: 4/23/15
 *Version: 1.0
 ****************************************End Comment********************************************/
-#pragma once
-
-#define DllExport   __declspec( dllexport )
-
+#define _IMPORTED
+#if defined(_IMPORTED)
+#define DllExport  
+#else
+#define DllExport __declspec(dllexport)
+#endif
+#if defined _DEBUG
+#undef _DEBUG
 #include<vector>
+#define _DEBUG
+#else
+#include<vector>
+#endif
 //defined to prevent dependency on intsafe.h for Mac and Linux platforms
 typedef unsigned int UINT32;
 typedef unsigned short UINT16;
@@ -106,7 +114,6 @@ private:
 
 	bool multipliable(MatrixND other) const;
 };
-
 /***********************************************Comment*********************************************************
 *The following links will show the papers used to define the rules being used in the program
 *
